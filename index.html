@@ -1,0 +1,1803 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>💌 A Special Mission For You</title>
+  <!-- Modern Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@700&family=Nunito:wght@400;600;700;800;900&family=Pacifico&display=swap" rel="stylesheet">
+  <!-- Confetti library -->
+  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+
+  <style>
+    *, *::before, *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      user-select: none;
+      -webkit-user-select: none;
+      -webkit-tap-highlight-color: transparent;
+      touch-action: manipulation;
+    }
+
+    :root {
+      --primary-pink: #f43f5e;
+      --secondary-pink: #ec4899;
+      --soft-pink: #fb7185;
+      --light-pink: #f472b6;
+      --purple-accent: #a855f7;
+      --violet-accent: #8b5cf6;
+      --indigo-dark: #0d0221;
+      --card-bg: rgba(22, 6, 44, 0.88);
+      --card-border: rgba(244, 114, 182, 0.35);
+      --text-main: #ffffff;
+      --text-sub: #c4b5fd;
+      --danger-red: #ef4444;
+    }
+
+    html, body {
+      width: 100%;
+      height: 100%;
+      height: 100dvh;
+      overflow: hidden;
+      font-family: 'Nunito', sans-serif;
+      background: var(--indigo-dark);
+      color: var(--text-main);
+      position: relative;
+    }
+
+    /* ── Cosmic Ambient Background ── */
+    #bg {
+      position: fixed;
+      inset: 0;
+      z-index: 0;
+      background: radial-gradient(circle at 50% 20%, #2e0854 0%, #15032d 45%, #0a0118 100%);
+      background-size: 200% 200%;
+      animation: bgPulse 12s ease infinite alternate;
+    }
+
+    @keyframes bgPulse {
+      0% { transform: scale(1); filter: hue-rotate(0deg); }
+      100% { transform: scale(1.06); filter: hue-rotate(18deg); }
+    }
+
+    #stars-canvas {
+      position: fixed;
+      inset: 0;
+      z-index: 1;
+      pointer-events: none;
+    }
+
+    /* ── Game Canvas ── */
+    #game-canvas {
+      position: fixed;
+      inset: 0;
+      z-index: 5;
+      touch-action: none;
+      display: none;
+    }
+
+    /* ── Sound Toggle Button ── */
+    #sound-toggle {
+      position: fixed;
+      top: 14px;
+      right: 14px;
+      z-index: 100;
+      background: rgba(255, 255, 255, 0.12);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      border-radius: 50%;
+      width: 38px;
+      height: 38px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.1rem;
+      cursor: pointer;
+      color: #fff;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+      transition: transform 0.2s, background 0.2s;
+    }
+    #sound-toggle:active { transform: scale(0.9); }
+
+    /* ── Heads-Up Display (HUD) ── */
+    #hud {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      padding: 14px 18px env(safe-area-inset-top, 14px);
+      display: none;
+      justify-content: space-between;
+      align-items: center;
+      z-index: 15;
+      pointer-events: none;
+      background: linear-gradient(to bottom, rgba(10, 1, 24, 0.85) 0%, transparent 100%);
+      backdrop-filter: blur(6px);
+      -webkit-backdrop-filter: blur(6px);
+    }
+    #hud.visible { display: flex; animation: slideDown 0.4s cubic-bezier(0.16, 1, 0.3, 1); }
+
+    .hud-box {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 2px;
+    }
+    .hud-title {
+      font-size: 0.7rem;
+      text-transform: uppercase;
+      letter-spacing: 1.2px;
+      color: #c084fc;
+      font-weight: 800;
+    }
+    .hud-counter {
+      font-size: 1.25rem;
+      font-weight: 900;
+      color: #fff;
+      text-shadow: 0 0 10px rgba(244, 63, 94, 0.6);
+    }
+    .lives-wrapper {
+      display: flex;
+      gap: 6px;
+    }
+    .life-icon {
+      font-size: 1.2rem;
+      transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1), filter 0.3s;
+    }
+    .life-icon.lost {
+      filter: grayscale(1) opacity(0.3);
+      transform: scale(0.75);
+    }
+    .combo-pill {
+      background: linear-gradient(135deg, #ec4899, #8b5cf6);
+      border-radius: 50px;
+      padding: 4px 14px;
+      font-size: 0.82rem;
+      font-weight: 900;
+      letter-spacing: 0.5px;
+      box-shadow: 0 0 14px rgba(236, 72, 153, 0.6);
+      opacity: 0;
+      transform: scale(0.8);
+      transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+    .combo-pill.active {
+      opacity: 1;
+      transform: scale(1);
+    }
+
+    /* ── Interactive App Cards & Screens ── */
+    .screen-layer {
+      position: fixed;
+      inset: 0;
+      z-index: 40;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      text-align: center;
+      background: rgba(10, 1, 24, 0.75);
+      backdrop-filter: blur(14px);
+      -webkit-backdrop-filter: blur(14px);
+      opacity: 1;
+      transition: opacity 0.4s ease, transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+      overflow-y: auto;
+      -webkit-overflow-scrolling: touch;
+    }
+    .screen-layer.hidden {
+      opacity: 0;
+      pointer-events: none;
+      transform: scale(0.94);
+      display: none !important;
+    }
+
+    /* Glass card */
+    .glass-card {
+      width: 100%;
+      max-width: 410px;
+      background: var(--card-bg);
+      border: 1.5px solid var(--card-border);
+      border-radius: 32px;
+      padding: 32px 24px;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5), 0 0 40px rgba(236, 72, 153, 0.2);
+      position: relative;
+      overflow: hidden;
+      margin: auto;
+      animation: cardPopIn 0.55s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+    }
+    .glass-card::before {
+      content: "";
+      position: absolute;
+      top: -30%;
+      left: -30%;
+      width: 160%;
+      height: 160%;
+      background: radial-gradient(circle at center, rgba(236, 72, 153, 0.12) 0%, transparent 65%);
+      pointer-events: none;
+    }
+
+    /* ── Typography & General UI ── */
+    .hero-icon {
+      font-size: 4.2rem;
+      display: inline-block;
+      margin-bottom: 12px;
+      filter: drop-shadow(0 0 20px rgba(244, 114, 182, 0.8));
+      animation: gentleHeartbeat 1.6s ease-in-out infinite;
+    }
+    .title-fancy {
+      font-family: 'Pacifico', cursive;
+      font-size: clamp(1.6rem, 6.5vw, 2.3rem);
+      margin-bottom: 12px;
+      background: linear-gradient(90deg, #f472b6, #c084fc, #f472b6);
+      background-size: 200% auto;
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      animation: shine 3s linear infinite;
+      line-height: 1.3;
+    }
+    .title-sub {
+      font-size: clamp(0.9rem, 3.8vw, 1.05rem);
+      color: var(--text-sub);
+      line-height: 1.65;
+      margin-bottom: 24px;
+    }
+    .title-sub strong {
+      color: #f9a8d4;
+    }
+
+    /* Primary Action Buttons */
+    .btn-main {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      width: 100%;
+      padding: 16px 28px;
+      border-radius: 50px;
+      border: none;
+      background: linear-gradient(135deg, #ec4899, #a855f7);
+      color: #fff;
+      font-family: 'Nunito', sans-serif;
+      font-weight: 900;
+      font-size: 1.08rem;
+      cursor: pointer;
+      box-shadow: 0 6px 25px rgba(236, 72, 153, 0.5), 0 0 45px rgba(168, 85, 247, 0.3);
+      transition: transform 0.15s ease, box-shadow 0.2s ease;
+      letter-spacing: 0.3px;
+    }
+    .btn-main:active {
+      transform: scale(0.96);
+    }
+    .btn-main:hover {
+      box-shadow: 0 8px 30px rgba(236, 72, 153, 0.7), 0 0 55px rgba(168, 85, 247, 0.4);
+    }
+
+    /* ── Proposal Button Cluster (Yes vs No) ── */
+    .proposal-actions {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 16px;
+      margin-top: 24px;
+      position: relative;
+      min-height: 65px;
+    }
+    .btn-yes {
+      padding: 15px 36px;
+      border-radius: 50px;
+      border: none;
+      background: linear-gradient(135deg, #ec4899, #8b5cf6);
+      color: #fff;
+      font-family: 'Nunito', sans-serif;
+      font-weight: 900;
+      font-size: 1.15rem;
+      cursor: pointer;
+      box-shadow: 0 6px 25px rgba(236, 72, 153, 0.55);
+      transition: all 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+      z-index: 10;
+    }
+    .btn-yes:active { transform: scale(0.92); }
+    .btn-yes.expanded {
+      transform: scale(1.15);
+      box-shadow: 0 0 40px rgba(236, 72, 153, 0.9), 0 0 70px rgba(168, 85, 247, 0.6);
+      animation: heartbeatPulse 1.2s infinite;
+    }
+
+    .btn-no {
+      padding: 14px 28px;
+      border-radius: 50px;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      background: rgba(71, 85, 105, 0.5);
+      color: #cbd5e1;
+      font-family: 'Nunito', sans-serif;
+      font-weight: 800;
+      font-size: 1rem;
+      cursor: pointer;
+      transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1), background 0.25s, color 0.25s, border-color 0.25s;
+      z-index: 10;
+      white-space: nowrap;
+    }
+    .btn-no.danger-1 {
+      background: rgba(220, 38, 38, 0.7);
+      border-color: #ef4444;
+      color: #fff;
+      box-shadow: 0 0 20px rgba(239, 68, 68, 0.6);
+    }
+    .btn-no.danger-2 {
+      background: #dc2626;
+      border-color: #f87171;
+      color: #fff;
+      font-weight: 900;
+      box-shadow: 0 0 30px rgba(220, 38, 38, 0.9);
+      animation: violentShake 0.25s infinite;
+    }
+
+    /* Screen red flash alert for threat */
+    #threat-flash {
+      position: fixed;
+      inset: 0;
+      z-index: 150;
+      pointer-events: none;
+      background: radial-gradient(circle at center, rgba(239, 68, 68, 0.45) 0%, rgba(185, 28, 28, 0.8) 100%);
+      opacity: 0;
+      transition: opacity 0.2s ease;
+    }
+    #threat-flash.active {
+      opacity: 1;
+    }
+
+    /* ── Interactive Questionnaire / Wizard ── */
+    .quiz-progress-bar {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      margin-bottom: 20px;
+    }
+    .quiz-step-dot {
+      width: 26px;
+      height: 6px;
+      border-radius: 6px;
+      background: rgba(255, 255, 255, 0.2);
+      transition: background 0.3s, width 0.3s;
+    }
+    .quiz-step-dot.active {
+      background: linear-gradient(90deg, #ec4899, #c084fc);
+      width: 44px;
+    }
+    .quiz-step-dot.passed {
+      background: #a855f7;
+    }
+
+    .question-title {
+      font-size: 1.25rem;
+      font-weight: 900;
+      color: #f9a8d4;
+      margin-bottom: 6px;
+    }
+    .question-sub {
+      font-size: 0.88rem;
+      color: var(--text-sub);
+      margin-bottom: 18px;
+    }
+
+    /* Option selection grid */
+    .options-grid {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      width: 100%;
+      margin-bottom: 20px;
+    }
+    .option-card {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 14px 18px;
+      background: rgba(255, 255, 255, 0.07);
+      border: 1.5px solid rgba(255, 255, 255, 0.12);
+      border-radius: 18px;
+      cursor: pointer;
+      text-align: left;
+      transition: all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+    .option-card:hover {
+      background: rgba(255, 255, 255, 0.12);
+      border-color: rgba(244, 114, 182, 0.4);
+    }
+    .option-card:active {
+      transform: scale(0.98);
+    }
+    .option-card.selected {
+      background: linear-gradient(135deg, rgba(236, 72, 153, 0.3), rgba(168, 85, 247, 0.3));
+      border-color: #f472b6;
+      box-shadow: 0 0 16px rgba(236, 72, 153, 0.4);
+    }
+    .option-card.selected .opt-radio {
+      border-color: #f472b6;
+      background: #ec4899;
+    }
+    .opt-icon {
+      font-size: 1.5rem;
+      flex-shrink: 0;
+    }
+    .opt-text {
+      flex: 1;
+      font-size: 0.96rem;
+      font-weight: 700;
+      color: #fff;
+    }
+    .opt-radio {
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      border: 2px solid rgba(255, 255, 255, 0.35);
+      flex-shrink: 0;
+      transition: all 0.2s;
+    }
+
+    /* Nested / Sub-questions section */
+    .sub-section {
+      display: none;
+      background: rgba(0, 0, 0, 0.28);
+      border: 1px dashed rgba(244, 114, 182, 0.4);
+      border-radius: 16px;
+      padding: 14px;
+      margin-top: 8px;
+      animation: fadeIn 0.3s ease;
+      text-align: left;
+    }
+    .sub-section.show { display: block; }
+    .sub-title {
+      font-size: 0.82rem;
+      font-weight: 800;
+      color: #e9d5ff;
+      margin-bottom: 10px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    .sub-options-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      margin-bottom: 8px;
+    }
+    .sub-opt-btn {
+      padding: 9px 12px;
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      border-radius: 12px;
+      color: #fff;
+      font-family: inherit;
+      font-size: 0.85rem;
+      font-weight: 700;
+      cursor: pointer;
+      text-align: center;
+      transition: all 0.18s;
+    }
+    .sub-opt-btn.selected {
+      background: linear-gradient(135deg, #ec4899, #a855f7);
+      border-color: #f472b6;
+      box-shadow: 0 0 12px rgba(236, 72, 153, 0.5);
+    }
+
+    /* Custom Text Input */
+    .custom-text-input {
+      width: 100%;
+      padding: 12px 16px;
+      background: rgba(255, 255, 255, 0.1);
+      border: 1.5px solid rgba(244, 114, 182, 0.4);
+      border-radius: 14px;
+      color: #fff;
+      font-family: 'Nunito', sans-serif;
+      font-size: 0.95rem;
+      font-weight: 600;
+      outline: none;
+      box-sizing: border-box;
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+    .custom-text-input:focus {
+      border-color: #f472b6;
+      box-shadow: 0 0 14px rgba(244, 114, 182, 0.4);
+      background: rgba(255, 255, 255, 0.15);
+    }
+    .custom-text-input::placeholder {
+      color: rgba(226, 196, 249, 0.5);
+    }
+
+    /* Summary Card Boarding Pass */
+    .summary-ticket {
+      background: linear-gradient(145deg, rgba(35, 10, 68, 0.9), rgba(58, 12, 94, 0.9));
+      border: 1.5px dashed rgba(244, 114, 182, 0.5);
+      border-radius: 20px;
+      padding: 18px 20px;
+      text-align: left;
+      margin-bottom: 20px;
+      position: relative;
+    }
+    .ticket-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 8px 0;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    }
+    .ticket-row:last-child { border-bottom: none; }
+    .ticket-label {
+      font-size: 0.8rem;
+      color: #c084fc;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    .ticket-val {
+      font-size: 0.92rem;
+      color: #fff;
+      font-weight: 800;
+      text-align: right;
+      max-width: 65%;
+      word-break: break-word;
+    }
+
+    /* ── Floating Heart Emojis on YES ── */
+    #floating-hearts-layer {
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      z-index: 199;
+      overflow: hidden;
+    }
+    .float-emoji {
+      position: absolute;
+      bottom: -60px;
+      animation: floatUpAnim linear forwards;
+    }
+
+    /* ── Keyframes ── */
+    @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+    @keyframes slideDown { from { transform: translateY(-100%); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+    @keyframes cardPopIn { from { opacity: 0; transform: scale(0.7) translateY(20px); } to { opacity: 1; transform: scale(1) translateY(0); } }
+    @keyframes gentleHeartbeat { 0%, 100% { transform: scale(1); } 14% { transform: scale(1.15); } 28% { transform: scale(1); } 42% { transform: scale(1.08); } }
+    @keyframes heartbeatPulse { 0%, 100% { transform: scale(1.15); } 50% { transform: scale(1.22); } }
+    @keyframes shine { to { background-position: 200% center; } }
+    @keyframes floatUpAnim { 0% { transform: translateY(0) scale(1) rotate(0deg); opacity: 0.9; } 100% { transform: translateY(-115vh) scale(0.4) rotate(360deg); opacity: 0; } }
+    @keyframes violentShake {
+      0%, 100% { transform: translate(0, 0) rotate(0deg); }
+      20% { transform: translate(-8px, 4px) rotate(-4deg); }
+      40% { transform: translate(8px, -4px) rotate(4deg); }
+      60% { transform: translate(-6px, -2px) rotate(-3deg); }
+      80% { transform: translate(6px, 2px) rotate(3deg); }
+    }
+    @keyframes redPulse {
+      0%, 100% { box-shadow: 0 0 20px rgba(239, 68, 68, 0.4); }
+      50% { box-shadow: 0 0 50px rgba(239, 68, 68, 0.9); }
+    }
+
+    /* Floating Hint Bubble */
+    #tap-hint {
+      position: fixed;
+      bottom: 24px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 20;
+      background: rgba(22, 6, 44, 0.85);
+      border: 1px solid rgba(244, 114, 182, 0.4);
+      backdrop-filter: blur(10px);
+      padding: 10px 22px;
+      border-radius: 50px;
+      font-size: 0.86rem;
+      font-weight: 700;
+      color: #f9a8d4;
+      pointer-events: none;
+      display: none;
+      animation: fadeIn 0.4s ease;
+      white-space: nowrap;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Backgrounds -->
+  <div id="bg"></div>
+  <canvas id="stars-canvas"></canvas>
+  <canvas id="game-canvas"></canvas>
+
+  <!-- Audio Toggle -->
+  <button id="sound-toggle" aria-label="Toggle Sound" title="Toggle Sound">🔊</button>
+
+  <!-- Threat Flash Effect -->
+  <div id="threat-flash"></div>
+
+  <!-- HUD Overlay -->
+  <div id="hud">
+    <div class="hud-box">
+      <div class="hud-title">Hearts Caught</div>
+      <div class="hud-counter"><span id="score-counter">0</span> / 10</div>
+    </div>
+    <div class="combo-pill" id="combo-pill">🔥 COMBO x<span id="combo-digit">2</span></div>
+    <div class="hud-box">
+      <div class="hud-title">Lives</div>
+      <div class="lives-wrapper" id="lives-container">
+        <span class="life-icon" id="life-0">❤️</span>
+        <span class="life-icon" id="life-1">❤️</span>
+        <span class="life-icon" id="life-2">❤️</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Floating Game Hint -->
+  <div id="tap-hint">👉 Tap every heart before it vanishes!</div>
+
+  <!-- ══════════════════════════════════════════ -->
+  <!-- 1. INTRO SCREEN                            -->
+  <!-- ══════════════════════════════════════════ -->
+  <div class="screen-layer" id="screen-intro">
+    <div class="glass-card">
+      <div class="hero-icon">💌</div>
+      <h1 class="title-fancy">Special Mission 🌸</h1>
+      <p class="title-sub">
+        I hid <strong>10 magical hearts</strong> across the screen!<br>
+        They'll slip away if you're not fast enough.<br><br>
+        <strong>Catch all 10 to unlock a secret question! 💕</strong>
+      </p>
+      <button class="btn-main" id="btn-start-game">
+        <span>✨ Start Mission</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════ -->
+  <!-- 2. GAME OVER SCREEN                        -->
+  <!-- ══════════════════════════════════════════ -->
+  <div class="screen-layer hidden" id="screen-gameover">
+    <div class="glass-card">
+      <div class="hero-icon" style="filter: drop-shadow(0 0 20px #ef4444);">💔</div>
+      <h2 class="title-fancy" style="background: linear-gradient(90deg, #f87171, #fb7185); -webkit-background-clip:text; -webkit-text-fill-color:transparent;">Aww, So Close!</h2>
+      <p class="title-sub">
+        The hearts escaped your fingers...<br>
+        but you can never escape my heart. 🥺<br>
+        Give it another try?
+      </p>
+      <button class="btn-main" id="btn-retry-game">
+        <span>🔄 Try Again</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════ -->
+  <!-- 3. THE PROPOSAL CARD (YES / NO EVASION)    -->
+  <!-- ══════════════════════════════════════════ -->
+  <div class="screen-layer hidden" id="screen-proposal">
+    <div class="glass-card" id="proposal-card-inner">
+      <div class="hero-icon">🎉</div>
+      <h2 class="title-fancy">Mission Cleared!</h2>
+      <p class="title-sub">
+        You caught every single heart I sent your way...<br>
+        just like you caught mine. 🥹✨
+      </p>
+      <div style="font-size: 1.25rem; font-weight: 900; color: #f472b6; margin: 12px 0 20px; line-height: 1.4;">
+        Will you go out with me<br>after school? 💖
+      </div>
+
+      <div class="proposal-actions">
+        <button class="btn-yes" id="btn-yes-proposal">💖 YES!</button>
+        <button class="btn-no" id="btn-no-proposal">No</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════ -->
+  <!-- 4. QUESTIONNAIRE WIZARD (3 STEPS)         -->
+  <!-- ══════════════════════════════════════════ -->
+  <div class="screen-layer hidden" id="screen-quiz">
+    <div class="glass-card">
+      
+      <!-- Progress Indicator -->
+      <div class="quiz-progress-bar">
+        <div class="quiz-step-dot active" id="dot-1"></div>
+        <div class="quiz-step-dot" id="dot-2"></div>
+        <div class="quiz-step-dot" id="dot-3"></div>
+      </div>
+
+      <!-- ── Step 1: Where do you wanna go? ── -->
+      <div id="quiz-step-1">
+        <div class="question-title">1) Where do you wanna go? 🌍</div>
+        <div class="question-sub">Pick our dream destination or plan:</div>
+
+        <div class="options-grid">
+          <!-- Option: Movie -->
+          <div class="option-card" data-val="movie" onclick="selectWhereOption('movie')">
+            <span class="opt-icon">🎬</span>
+            <span class="opt-text">Movie Date</span>
+            <div class="opt-radio"></div>
+          </div>
+          <!-- Sub-input for Movie -->
+          <div class="sub-section" id="sub-movie">
+            <div class="sub-title">🍿 Which movie do you wanna watch?</div>
+            <input type="text" class="custom-text-input" id="input-movie-name" placeholder="Type movie name here..." />
+          </div>
+
+          <!-- Option: Abroad Trip -->
+          <div class="option-card" data-val="abroad" onclick="selectWhereOption('abroad')">
+            <span class="opt-icon">✈️</span>
+            <span class="opt-text">Abroad Trip</span>
+            <div class="opt-radio"></div>
+          </div>
+          <!-- Sub-input for Abroad -->
+          <div class="sub-section" id="sub-abroad">
+            <div class="sub-title">🌴 Choose a dream spot:</div>
+            <div class="sub-options-grid">
+              <button class="sub-opt-btn" onclick="setSubAbroad('Bali')">🌴 Bali</button>
+              <button class="sub-opt-btn" onclick="setSubAbroad('Diamond Beach')">🏖️ Diamond Beach</button>
+              <button class="sub-opt-btn" onclick="setSubAbroad('Blue Lagoon')">🌊 Blue Lagoon</button>
+              <button class="sub-opt-btn" onclick="setSubAbroad('others')">✏️ Others...</button>
+            </div>
+            <div id="sub-abroad-other-wrap" style="display:none; margin-top:8px;">
+              <input type="text" class="custom-text-input" id="input-abroad-custom" placeholder="Where abroad?..." />
+            </div>
+          </div>
+
+          <!-- Option: Bike Ride -->
+          <div class="option-card" data-val="bikeride" onclick="selectWhereOption('bikeride')">
+            <span class="opt-icon">🏍️</span>
+            <span class="opt-text">Long Bike Ride</span>
+            <div class="opt-radio"></div>
+          </div>
+          <!-- Sub-input for Bike Ride -->
+          <div class="sub-section" id="sub-bikeride">
+            <div class="sub-title">⛰️ Where should we ride to?</div>
+            <div class="sub-options-grid">
+              <button class="sub-opt-btn" onclick="setSubBike('Manali')">🏔️ Manali</button>
+              <button class="sub-opt-btn" onclick="setSubBike('Goa')">🏖️ Goa</button>
+              <button class="sub-opt-btn" onclick="setSubBike('Ladakh')">⛰️ Ladakh</button>
+              <button class="sub-opt-btn" onclick="setSubBike('others')">✏️ Others...</button>
+            </div>
+            <div id="sub-bike-other-wrap" style="display:none; margin-top:8px;">
+              <input type="text" class="custom-text-input" id="input-bike-custom" placeholder="Which route/place?..." />
+            </div>
+          </div>
+
+          <!-- Option: Other -->
+          <div class="option-card" data-val="other" onclick="selectWhereOption('other')">
+            <span class="opt-icon">✨</span>
+            <span class="opt-text">Something Else...</span>
+            <div class="opt-radio"></div>
+          </div>
+          <!-- Sub-input for Other -->
+          <div class="sub-section" id="sub-other">
+            <div class="sub-title">💭 Tell me what you have in mind:</div>
+            <input type="text" class="custom-text-input" id="input-other-where" placeholder="Describe your dream plan..." />
+          </div>
+        </div>
+
+        <button class="btn-main" onclick="goToStep(2)">
+          <span>Next Step ➔</span>
+        </button>
+      </div>
+
+      <!-- ── Step 2: When do you wanna go? ── -->
+      <div id="quiz-step-2" style="display: none;">
+        <div class="question-title">2) When do you wanna go? ⏰</div>
+        <div class="question-sub">Choose our perfect timeline:</div>
+
+        <div class="options-grid">
+          <div class="option-card" data-when="after school" onclick="selectWhenOption('after school')">
+            <span class="opt-icon">🎒</span>
+            <span class="opt-text">After School</span>
+            <div class="opt-radio"></div>
+          </div>
+          <div class="option-card" data-when="after clg" onclick="selectWhenOption('after clg')">
+            <span class="opt-icon">🎓</span>
+            <span class="opt-text">After College</span>
+            <div class="opt-radio"></div>
+          </div>
+          <div class="option-card" data-when="after marriage" onclick="selectWhenOption('after marriage')">
+            <span class="opt-icon">💍</span>
+            <span class="opt-text">After Marriage</span>
+            <div class="opt-radio"></div>
+          </div>
+          <div class="option-card" data-when="after dead 🥲" onclick="selectWhenOption('after dead 🥲')">
+            <span class="opt-icon">💀</span>
+            <span class="opt-text">After Dead 🥲</span>
+            <div class="opt-radio"></div>
+          </div>
+        </div>
+
+        <div style="display:flex; gap:10px;">
+          <button class="btn-no" style="flex:1;" onclick="goToStep(1)">⬅ Back</button>
+          <button class="btn-main" style="flex:2;" onclick="goToStep(3)">Next ➔</button>
+        </div>
+      </div>
+
+      <!-- ── Step 3: With whom do you wanna go? ── -->
+      <div id="quiz-step-3" style="display: none;">
+        <div class="question-title">3) With whom do you wanna go? 👥</div>
+        <div class="question-sub">Be honest now! 😉</div>
+
+        <div class="options-grid">
+          <div class="option-card" data-whom="only with me 😁😋" onclick="selectWhomOption('only with me 😁😋')">
+            <span class="opt-icon">💖</span>
+            <span class="opt-text">Only with me 😁😋</span>
+            <div class="opt-radio"></div>
+          </div>
+          <div class="option-card" data-whom="group trip (with ur frnds ) 🙄" onclick="selectWhomOption('group trip (with ur frnds ) 🙄')">
+            <span class="opt-icon">🙄</span>
+            <span class="opt-text">Group trip (with your friends) 🙄</span>
+            <div class="opt-radio"></div>
+          </div>
+          <div class="option-card" data-whom="after dead 👻🙂" onclick="selectWhomOption('after dead 👻🙂')">
+            <span class="opt-icon">👻</span>
+            <span class="opt-text">After dead 👻🙂</span>
+            <div class="opt-radio"></div>
+          </div>
+        </div>
+
+        <div style="display:flex; gap:10px;">
+          <button class="btn-no" style="flex:1;" onclick="goToStep(2)">⬅ Back</button>
+          <button class="btn-main" style="flex:2;" onclick="showSummaryCard()">Review 💌</button>
+        </div>
+      </div>
+
+      <!-- ── Step 4: Summary / Confirmation Ticket ── -->
+      <div id="quiz-step-summary" style="display: none;">
+        <div class="hero-icon" style="font-size:2.8rem; margin-bottom:6px;">🎟️</div>
+        <div class="question-title">Official Date Pass 💌</div>
+        <div class="question-sub">Here is our sealed agreement:</div>
+
+        <div class="summary-ticket">
+          <div class="ticket-row">
+            <span class="ticket-label">📍 Destination</span>
+            <span class="ticket-val" id="sum-where">-</span>
+          </div>
+          <div class="ticket-row">
+            <span class="ticket-label">⏰ When</span>
+            <span class="ticket-val" id="sum-when">-</span>
+          </div>
+          <div class="ticket-row">
+            <span class="ticket-label">👥 Companion</span>
+            <span class="ticket-val" id="sum-whom">-</span>
+          </div>
+        </div>
+
+        <div style="margin-bottom: 16px; text-align: left;">
+          <label style="font-size:0.8rem; color:#e2c4f9; font-weight:700; margin-bottom:6px; display:block;">
+            ✍️ Leave a cute note for him (optional):
+          </label>
+          <input type="text" class="custom-text-input" id="input-sweet-note" placeholder="Write anything you want to tell him..." />
+        </div>
+
+        <button class="btn-main" id="btn-submit-all" onclick="submitResponses()">
+          <span>💖 Lock It In & Send! 🚀</span>
+        </button>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════ -->
+  <!-- 5. FINAL CELEBRATION SCREEN                -->
+  <!-- ══════════════════════════════════════════ -->
+  <div class="screen-layer hidden" id="screen-celebrate">
+    <div id="floating-hearts-layer"></div>
+    <div class="glass-card" style="padding: 38px 24px;">
+      <div class="hero-icon">🥰</div>
+      <h1 class="title-fancy" style="font-size: 2.2rem;">YAY! IT'S A DATE! 🎉</h1>
+      <p class="title-sub" style="font-size: 1.05rem; margin-bottom: 22px;">
+        You just made me the happiest person in the universe. 💖<br><br>
+        <span style="color:#f9a8d4; font-weight:800;" id="final-summary-sentence">Can't wait to go out with you! ✨</span>
+      </p>
+      
+      <!-- WhatsApp share button fallback -->
+      <a id="wa-share-btn" href="#" target="_blank" class="btn-main" style="text-decoration:none; background:linear-gradient(135deg,#25D366,#128C7E); margin-bottom:12px; box-shadow:0 6px 20px rgba(37,211,102,0.4);">
+        <span>💬 Send Confirmation on WhatsApp</span>
+      </a>
+
+      <button class="btn-no" style="width:100%; border-radius:50px;" onclick="replayEverything()">
+        🔄 Play Again
+      </button>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════ -->
+  <!-- JAVASCRIPT LOGIC                           -->
+  <!-- ══════════════════════════════════════════ -->
+  <script>
+    /* ==========================================================================
+       CONFIG & NOTIFICATION ENDPOINTS
+       ==========================================================================
+       You can paste your Formspree endpoint URL or FormSubmit email below so you
+       get an instant email notification the moment she answers!
+       e.g., const FORM_ENDPOINT = "https://formspree.io/f/YOUR_FORM_ID";
+             or "https://formsubmit.co/ajax/your_email@gmail.com";
+    */
+    const FORM_ENDPOINT = ""; // Leave blank or paste your Formspree/FormSubmit URL here
+
+    // ══════════════════════════════════════════
+    // SYNTHESIZED SOUND EFFECTS (Web Audio API)
+    // ══════════════════════════════════════════
+    let audioCtx = null;
+    let soundEnabled = true;
+
+    function initAudio() {
+      if (!audioCtx) {
+        const AudioContext = window.AudioContext || window.webkitAudioContext;
+        if (AudioContext) audioCtx = new AudioContext();
+      }
+      if (audioCtx && audioCtx.state === 'suspended') {
+        audioCtx.resume();
+      }
+    }
+
+    const soundToggle = document.getElementById("sound-toggle");
+    soundToggle.addEventListener("click", () => {
+      soundEnabled = !soundEnabled;
+      soundToggle.textContent = soundEnabled ? "🔊" : "🔇";
+      if (soundEnabled) initAudio();
+    });
+
+    function playSound(type) {
+      if (!soundEnabled) return;
+      initAudio();
+      if (!audioCtx) return;
+
+      const now = audioCtx.currentTime;
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.connect(gain);
+      gain.connect(audioCtx.destination);
+
+      if (type === 'pop') {
+        // Cute pleasant bubble pop
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(450 + Math.random() * 180, now);
+        osc.frequency.exponentialRampToValueAtTime(880, now + 0.1);
+        gain.gain.setValueAtTime(0.3, now);
+        gain.gain.exponentialRampToValueAtTime(0.01, now + 0.12);
+        osc.start(now);
+        osc.stop(now + 0.12);
+      } else if (type === 'combo') {
+        // High sparkle chime
+        osc.type = 'triangle';
+        osc.frequency.setValueAtTime(600, now);
+        osc.frequency.setValueAtTime(800, now + 0.06);
+        osc.frequency.setValueAtTime(1200, now + 0.12);
+        gain.gain.setValueAtTime(0.3, now);
+        gain.gain.exponentialRampToValueAtTime(0.01, now + 0.25);
+        osc.start(now);
+        osc.stop(now + 0.25);
+      } else if (type === 'miss') {
+        // Gentle descending tone
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(320, now);
+        osc.frequency.exponentialRampToValueAtTime(140, now + 0.22);
+        gain.gain.setValueAtTime(0.35, now);
+        gain.gain.exponentialRampToValueAtTime(0.01, now + 0.22);
+        osc.start(now);
+        osc.stop(now + 0.22);
+      } else if (type === 'danger') {
+        // Threatening knife whoosh / low drone
+        osc.type = 'sawtooth';
+        osc.frequency.setValueAtTime(180, now);
+        osc.frequency.exponentialRampToValueAtTime(70, now + 0.35);
+        gain.gain.setValueAtTime(0.4, now);
+        gain.gain.exponentialRampToValueAtTime(0.01, now + 0.35);
+        osc.start(now);
+        osc.stop(now + 0.35);
+      } else if (type === 'celebrate') {
+        // Joyful arpeggio
+        const notes = [523.25, 659.25, 783.99, 1046.50];
+        notes.forEach((freq, idx) => {
+          const o = audioCtx.createOscillator();
+          const g = audioCtx.createGain();
+          o.type = 'triangle';
+          o.frequency.value = freq;
+          o.connect(g);
+          g.connect(audioCtx.destination);
+          const t = now + idx * 0.08;
+          g.gain.setValueAtTime(0.25, t);
+          g.gain.exponentialRampToValueAtTime(0.01, t + 0.4);
+          o.start(t);
+          o.stop(t + 0.4);
+        });
+      }
+    }
+
+    // ══════════════════════════════════════════
+    // STARFIELD BACKGROUND
+    // ══════════════════════════════════════════
+    const starCanvas = document.getElementById("stars-canvas");
+    const starCtx = starCanvas.getContext("2d");
+    let starW = starCanvas.width = window.innerWidth;
+    let starH = starCanvas.height = window.innerHeight;
+
+    const stars = Array.from({ length: 120 }, () => ({
+      x: Math.random() * starW,
+      y: Math.random() * starH,
+      radius: Math.random() * 1.5 + 0.4,
+      alpha: Math.random(),
+      speed: (Math.random() * 0.008 + 0.003) * (Math.random() > 0.5 ? 1 : -1)
+    }));
+
+    function renderStars() {
+      starCtx.clearRect(0, 0, starW, starH);
+      stars.forEach(s => {
+        s.alpha += s.speed;
+        if (s.alpha <= 0 || s.alpha >= 1) s.speed *= -1;
+        starCtx.beginPath();
+        starCtx.arc(s.x, s.y, s.radius, 0, Math.PI * 2);
+        starCtx.fillStyle = `rgba(255, 255, 255, ${s.alpha})`;
+        starCtx.fill();
+      });
+      requestAnimationFrame(renderStars);
+    }
+    renderStars();
+
+    // ══════════════════════════════════════════
+    // TOUCH-OPTIMIZED HEART GAME ENGINE
+    // ══════════════════════════════════════════
+    const gameCanvas = document.getElementById("game-canvas");
+    const ctx = gameCanvas.getContext("2d");
+    let GW = gameCanvas.width = window.innerWidth;
+    let GH = gameCanvas.height = window.innerHeight;
+
+    window.addEventListener("resize", () => {
+      GW = gameCanvas.width = window.innerWidth;
+      GH = gameCanvas.height = window.innerHeight;
+      starW = starCanvas.width = GW;
+      starH = starCanvas.height = GH;
+    });
+
+    const COLOR_THEMES = [
+      { fill: "#f43f5e", glow: "rgba(244,63,94,0.65)", ring: "#fb7185" },
+      { fill: "#ec4899", glow: "rgba(236,72,153,0.65)", ring: "#f472b6" },
+      { fill: "#a855f7", glow: "rgba(168,85,247,0.65)", ring: "#c084fc" },
+      { fill: "#8b5cf6", glow: "rgba(139,92,246,0.65)", ring: "#a78bfa" },
+      { fill: "#f472b6", glow: "rgba(244,114,182,0.65)", ring: "#fbcfe8" }
+    ];
+
+    let gameRunning = false;
+    let score = 0;
+    const targetScore = 10;
+    let lives = 3;
+    let combo = 0;
+    let activeHearts = [];
+    let particles = [];
+    let floatingTexts = [];
+    let lastSpawnTime = 0;
+    let spawnInterval = 1300;
+    let maxOnScreen = 1;
+    let baseLifetime = 2800; // ample time for comfortable phone tapping
+    let gameLoopId = null;
+    let heartCounter = 0;
+
+    function resetGameState() {
+      score = 0;
+      lives = 3;
+      combo = 0;
+      activeHearts = [];
+      particles = [];
+      floatingTexts = [];
+      lastSpawnTime = 0;
+      spawnInterval = 1300;
+      maxOnScreen = 1;
+      baseLifetime = 2800;
+      updateHUD();
+    }
+
+    function updateHUD() {
+      document.getElementById("score-counter").textContent = score;
+      for (let i = 0; i < 3; i++) {
+        const el = document.getElementById("life-" + i);
+        if (el) el.classList.toggle("lost", i >= lives);
+      }
+      const comboPill = document.getElementById("combo-pill");
+      if (combo >= 2) {
+        document.getElementById("combo-digit").textContent = combo;
+        comboPill.classList.add("active");
+      } else {
+        comboPill.classList.remove("active");
+      }
+    }
+
+    function spawnHeartObject() {
+      // Sizing scaled to screen size so it's extra easy on phones
+      const minDim = Math.min(GW, GH);
+      const radius = Math.max(30, minDim * 0.08); // 30px to 45px radius
+      const padX = radius + 25;
+      const topPad = 80;
+      const botPad = radius + 40;
+
+      const x = padX + Math.random() * (GW - padX * 2);
+      const y = topPad + Math.random() * (GH - topPad - botPad);
+      const theme = COLOR_THEMES[Math.floor(Math.random() * COLOR_THEMES.length)];
+      const lifetime = baseLifetime + (Math.random() - 0.5) * 300;
+
+      activeHearts.push({
+        id: heartCounter++,
+        x, y,
+        radius,
+        theme,
+        created: performance.now(),
+        lifetime,
+        popped: false,
+        scale: 0,
+        pulseOffset: Math.random() * Math.PI * 2
+      });
+    }
+
+    function drawSmoothHeart(c, cx, cy, size) {
+      c.save();
+      c.translate(cx, cy);
+      c.scale(size / 30, size / 30);
+      c.beginPath();
+      c.moveTo(0, 9);
+      c.bezierCurveTo(-5, 4, -20, 4, -20, -6);
+      c.bezierCurveTo(-20, -20, 0, -14, 0, -4);
+      c.bezierCurveTo(0, -14, 20, -20, 20, -6);
+      c.bezierCurveTo(20, 4, 5, 4, 0, 9);
+      c.closePath();
+      c.restore();
+    }
+
+    function addParticles(x, y, color, count = 22) {
+      for (let i = 0; i < count; i++) {
+        const angle = (Math.PI * 2 / count) * i + Math.random() * 0.4;
+        const speed = 2.5 + Math.random() * 5;
+        particles.push({
+          x, y,
+          vx: Math.cos(angle) * speed,
+          vy: Math.sin(angle) * speed - 1.2,
+          r: 3 + Math.random() * 5,
+          life: 1,
+          decay: 0.024 + Math.random() * 0.02,
+          color,
+          isHeart: Math.random() > 0.45,
+          rot: Math.random() * Math.PI * 2,
+          spin: (Math.random() - 0.5) * 0.2
+        });
+      }
+    }
+
+    function addFloatingLabel(x, y, text, color) {
+      floatingTexts.push({
+        x, y,
+        vy: -2,
+        text,
+        color,
+        life: 1,
+        decay: 0.025
+      });
+    }
+
+    // Touch / Click Handler with generous hit detection radius
+    function handleTapInteraction(px, py) {
+      if (!gameRunning) return;
+      initAudio();
+
+      let hit = false;
+      // Loop newest hearts first
+      for (let i = activeHearts.length - 1; i >= 0; i--) {
+        const h = activeHearts[i];
+        if (h.popped) continue;
+
+        // Generous touch hit box (radius + 25px tolerance for mobile fingers)
+        const hitMargin = 25;
+        const distSq = (px - h.x) ** 2 + (py - h.y) ** 2;
+        const targetR = h.radius * h.scale + hitMargin;
+
+        if (distSq <= targetR * targetR) {
+          h.popped = true;
+          hit = true;
+          score++;
+          combo++;
+
+          playSound(combo >= 3 ? 'combo' : 'pop');
+          addParticles(h.x, h.y, h.theme.fill, 24);
+
+          // Confetti burst for combo
+          if (combo >= 3) {
+            confetti({
+              particleCount: 16,
+              startVelocity: 18,
+              spread: 360,
+              origin: { x: h.x / GW, y: h.y / GH },
+              colors: [h.theme.fill, "#f472b6", "#c084fc"],
+              ticks: 40,
+              scalar: 0.8
+            });
+          }
+
+          const label = combo >= 3 ? `+${combo}x COMBO! 🔥` : "+1 💕";
+          addFloatingLabel(h.x, h.y - 35, label, combo >= 3 ? "#f9a8d4" : "#ffffff");
+          updateHUD();
+
+          // Scale difficulty smoothly
+          if (score >= 4) { maxOnScreen = 2; spawnInterval = 1100; baseLifetime = 2500; }
+          if (score >= 7) { maxOnScreen = 2; spawnInterval = 950;  baseLifetime = 2200; }
+
+          if (score >= targetScore) {
+            triggerWinSequence();
+          }
+          break;
+        }
+      }
+
+      if (!hit) {
+        // Miss ripple feedback
+        particles.push({
+          x: px, y: py,
+          r: 5, maxR: 35,
+          life: 1, decay: 0.04,
+          isRipple: true,
+          color: "rgba(255, 255, 255, 0.25)"
+        });
+      }
+    }
+
+    // Canvas listeners with preventDefault
+    gameCanvas.addEventListener("touchstart", (e) => {
+      e.preventDefault();
+      for (let i = 0; i < e.changedTouches.length; i++) {
+        const t = e.changedTouches[i];
+        handleTapInteraction(t.clientX, t.clientY);
+      }
+    }, { passive: false });
+
+    gameCanvas.addEventListener("pointerdown", (e) => {
+      if (e.pointerType !== 'touch') {
+        handleTapInteraction(e.clientX, e.clientY);
+      }
+    });
+
+    function handleMissedHeart(h) {
+      playSound('miss');
+      combo = 0;
+      lives--;
+      addParticles(h.x, h.y, "#94a3b8", 12);
+      addFloatingLabel(h.x, h.y - 25, "MISS 💔", "#fb7185");
+      updateHUD();
+
+      // Shake HUD
+      const hudEl = document.getElementById("hud");
+      hudEl.style.animation = "none";
+      hudEl.offsetHeight;
+      hudEl.style.animation = "violentShake 0.35s ease";
+
+      if (lives <= 0) {
+        gameRunning = false;
+        setTimeout(showGameOverScreen, 500);
+      }
+    }
+
+    function runGameLoop(now) {
+      if (!gameRunning) return;
+      gameLoopId = requestAnimationFrame(runGameLoop);
+      ctx.clearRect(0, 0, GW, GH);
+
+      // Spawn check
+      const aliveCount = activeHearts.filter(h => !h.popped).length;
+      if (now - lastSpawnTime > spawnInterval && aliveCount < maxOnScreen && score < targetScore) {
+        spawnHeartObject();
+        lastSpawnTime = now;
+      }
+
+      // Update and draw active hearts
+      activeHearts = activeHearts.filter(h => {
+        if (h.popped) {
+          h.scale = Math.max(0, h.scale - 0.14);
+          if (h.scale <= 0) return false;
+        }
+
+        const age = now - h.created;
+        const progress = Math.min(1, age / h.lifetime);
+
+        if (h.scale < 1 && !h.popped) {
+          h.scale = Math.min(1, h.scale + 0.1);
+        }
+
+        // Check if lifetime expired
+        if (progress >= 1 && !h.popped) {
+          handleMissedHeart(h);
+          return false;
+        }
+
+        const r = h.radius * h.scale;
+        const pulse = 1 + Math.sin(now / 220 + h.pulseOffset) * 0.05;
+        const drawR = r * pulse;
+
+        // Shrinking countdown ring
+        const remaining = h.popped ? 0 : 1 - progress;
+        const ringR = drawR + 12 + remaining * 16;
+        ctx.beginPath();
+        ctx.arc(h.x, h.y, ringR, 0, Math.PI * 2);
+        ctx.strokeStyle = h.theme.ring;
+        ctx.lineWidth = 3.5;
+        ctx.globalAlpha = remaining * 0.75;
+        ctx.stroke();
+
+        // Glowing backdrop
+        const grad = ctx.createRadialGradient(h.x, h.y, 0, h.x, h.y, drawR * 2.2);
+        grad.addColorStop(0, h.theme.glow);
+        grad.addColorStop(1, "transparent");
+        ctx.beginPath();
+        ctx.arc(h.x, h.y, drawR * 2.2, 0, Math.PI * 2);
+        ctx.fillStyle = grad;
+        ctx.fill();
+
+        // Draw Heart
+        ctx.save();
+        drawSmoothHeart(ctx, h.x, h.y, drawR * 2.2);
+        ctx.fillStyle = h.theme.fill;
+        ctx.shadowColor = h.theme.fill;
+        ctx.shadowBlur = 18;
+        ctx.fill();
+
+        // Inner Shine
+        ctx.clip();
+        const shine = ctx.createRadialGradient(h.x - drawR * 0.3, h.y - drawR * 0.4, 0, h.x, h.y, drawR);
+        shine.addColorStop(0, "rgba(255, 255, 255, 0.4)");
+        shine.addColorStop(0.5, "rgba(255, 255, 255, 0.05)");
+        shine.addColorStop(1, "transparent");
+        ctx.fillStyle = shine;
+        ctx.fillRect(h.x - drawR * 2, h.y - drawR * 2, drawR * 4, drawR * 4);
+        ctx.restore();
+
+        return true;
+      });
+
+      // Update and draw particles
+      particles = particles.filter(p => {
+        p.life -= p.decay;
+        if (p.life <= 0) return false;
+
+        if (p.isRipple) {
+          p.r += (p.maxR - p.r) * 0.15;
+          ctx.beginPath();
+          ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+          ctx.strokeStyle = p.color;
+          ctx.lineWidth = 2;
+          ctx.globalAlpha = p.life * 0.5;
+          ctx.stroke();
+          ctx.globalAlpha = 1;
+          return true;
+        }
+
+        p.x += p.vx;
+        p.y += p.vy;
+        p.vy += 0.08;
+        p.rot += p.spin;
+
+        ctx.save();
+        ctx.globalAlpha = p.life;
+        if (p.isHeart) {
+          drawSmoothHeart(ctx, p.x, p.y, p.r * 2);
+          ctx.fillStyle = p.color;
+          ctx.fill();
+        } else {
+          ctx.beginPath();
+          ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+          ctx.fillStyle = p.color;
+          ctx.fill();
+        }
+        ctx.restore();
+        return true;
+      });
+
+      // Floating labels
+      floatingTexts = floatingTexts.filter(t => {
+        t.life -= t.decay;
+        t.y += t.vy;
+        if (t.life <= 0) return false;
+
+        ctx.save();
+        ctx.globalAlpha = t.life;
+        ctx.font = `900 ${16 + Math.round((1 - t.life) * 4)}px "Nunito"`;
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        ctx.fillStyle = t.color;
+        ctx.shadowColor = t.color;
+        ctx.shadowBlur = 10;
+        ctx.fillText(t.text, t.x, t.y);
+        ctx.restore();
+        return true;
+      });
+    }
+
+    // ══════════════════════════════════════════
+    // GAME FLOW CONTROLLER
+    // ══════════════════════════════════════════
+    function startHeartGame() {
+      resetGameState();
+      gameRunning = true;
+      lastSpawnTime = performance.now() - spawnInterval;
+
+      document.getElementById("screen-intro").classList.add("hidden");
+      document.getElementById("screen-gameover").classList.add("hidden");
+      document.getElementById("screen-proposal").classList.add("hidden");
+      document.getElementById("game-canvas").style.display = "block";
+      document.getElementById("hud").classList.add("visible");
+
+      const hint = document.getElementById("tap-hint");
+      hint.style.display = "block";
+      setTimeout(() => { hint.style.display = "none"; }, 3000);
+
+      gameLoopId = requestAnimationFrame(runGameLoop);
+    }
+
+    function showGameOverScreen() {
+      if (gameLoopId) cancelAnimationFrame(gameLoopId);
+      ctx.clearRect(0, 0, GW, GH);
+      document.getElementById("game-canvas").style.display = "none";
+      document.getElementById("hud").classList.remove("visible");
+      document.getElementById("screen-gameover").classList.remove("hidden");
+    }
+
+    function triggerWinSequence() {
+      gameRunning = false;
+      if (gameLoopId) cancelAnimationFrame(gameLoopId);
+      ctx.clearRect(0, 0, GW, GH);
+
+      playSound('celebrate');
+      confetti({
+        particleCount: 100,
+        spread: 70,
+        origin: { y: 0.6 },
+        colors: ["#f43f5e", "#ec4899", "#c084fc", "#38bdf8"]
+      });
+
+      setTimeout(() => {
+        document.getElementById("game-canvas").style.display = "none";
+        document.getElementById("hud").classList.remove("visible");
+        document.getElementById("screen-proposal").classList.remove("hidden");
+      }, 700);
+    }
+
+    // Event Listeners for Game Start/Retry
+    document.getElementById("btn-start-game").addEventListener("click", () => {
+      initAudio();
+      startHeartGame();
+    });
+    document.getElementById("btn-retry-game").addEventListener("click", () => {
+      initAudio();
+      startHeartGame();
+    });
+
+    // ══════════════════════════════════════════
+    // "NO" BUTTON THREATENING SEQUENCE
+    // ══════════════════════════════════════════
+    const btnNo = document.getElementById("btn-no-proposal");
+    const btnYes = document.getElementById("btn-yes-proposal");
+    const threatFlash = document.getElementById("threat-flash");
+    let noClickCount = 0;
+
+    function handleNoInteraction(e) {
+      if (e) e.preventDefault();
+      noClickCount++;
+      playSound('danger');
+
+      const card = document.getElementById("proposal-card-inner");
+      const cardRect = card.getBoundingClientRect();
+      const maxX = cardRect.width / 2 - 50;
+      const maxY = cardRect.height / 2 - 40;
+
+      if (noClickCount === 1) {
+        // Stage 1: Knife threat
+        btnNo.innerHTML = "🔪 Wait what?!";
+        btnNo.className = "btn-no danger-1";
+        const rx = (Math.random() - 0.5) * 2 * maxX;
+        const ry = (Math.random() - 0.5) * 2 * maxY;
+        btnNo.style.transform = `translate(${rx}px, ${ry}px)`;
+
+        // Brief flash
+        threatFlash.classList.add("active");
+        setTimeout(() => threatFlash.classList.remove("active"), 200);
+
+      } else if (noClickCount === 2) {
+        // Stage 2: Violent Threat
+        btnNo.innerHTML = "☠️ Don't you dare!!";
+        btnNo.className = "btn-no danger-2";
+        const rx = (Math.random() - 0.5) * 2 * maxX;
+        const ry = (Math.random() - 0.5) * 2 * maxY;
+        btnNo.style.transform = `translate(${rx}px, ${ry}px)`;
+
+        // Card shake
+        card.style.animation = "none";
+        card.offsetHeight;
+        card.style.animation = "violentShake 0.4s ease";
+
+        threatFlash.classList.add("active");
+        setTimeout(() => threatFlash.classList.remove("active"), 350);
+
+      } else if (noClickCount >= 3) {
+        // Stage 3: Disintegration & Elimination!
+        btnNo.innerHTML = "💀 NO CHOICE!";
+        threatFlash.classList.add("active");
+
+        setTimeout(() => {
+          threatFlash.classList.remove("active");
+          btnNo.style.transition = "all 0.4s ease";
+          btnNo.style.opacity = "0";
+          btnNo.style.transform = "scale(0.1)";
+          btnNo.style.pointerEvents = "none";
+          setTimeout(() => { btnNo.style.display = "none"; }, 400);
+
+          // YES button expands and pulses enticingly
+          btnYes.classList.add("expanded");
+          btnYes.innerHTML = "💖 YES! (Only Choice 🥰)";
+        }, 300);
+      }
+    }
+
+    btnNo.addEventListener("touchstart", handleNoInteraction, { passive: false });
+    btnNo.addEventListener("click", handleNoInteraction);
+
+    // ══════════════════════════════════════════
+    // POST-YES QUESTIONNAIRE WIZARD
+    // ══════════════════════════════════════════
+    const userAnswers = {
+      whereCategory: "",
+      whereDetail: "",
+      when: "",
+      whom: "",
+      sweetNote: ""
+    };
+
+    // Clicking YES opens Quiz
+    btnYes.addEventListener("click", () => {
+      playSound('celebrate');
+      confetti({
+        particleCount: 50,
+        spread: 60,
+        origin: { y: 0.5 },
+        colors: ["#ec4899", "#f472b6", "#c084fc"]
+      });
+
+      document.getElementById("screen-proposal").classList.add("hidden");
+      document.getElementById("screen-quiz").classList.remove("hidden");
+      goToStep(1);
+    });
+
+    function goToStep(stepNum) {
+      playSound('pop');
+
+      // Validation check before proceeding from step 1
+      if (stepNum === 2) {
+        if (!userAnswers.whereCategory) {
+          alert("Please pick where you'd like to go first! 🌸");
+          return;
+        }
+        // Extract detail based on category
+        if (userAnswers.whereCategory === 'movie') {
+          const m = document.getElementById("input-movie-name").value.trim();
+          userAnswers.whereDetail = m ? `Movie: ${m}` : "Movie Date";
+        } else if (userAnswers.whereCategory === 'abroad') {
+          if (!userAnswers.whereDetail) userAnswers.whereDetail = "Bali";
+          if (userAnswers.whereDetail === 'others') {
+            const c = document.getElementById("input-abroad-custom").value.trim();
+            userAnswers.whereDetail = c ? `Abroad: ${c}` : "Abroad Trip";
+          }
+        } else if (userAnswers.whereCategory === 'bikeride') {
+          if (!userAnswers.whereDetail) userAnswers.whereDetail = "Manali";
+          if (userAnswers.whereDetail === 'others') {
+            const c = document.getElementById("input-bike-custom").value.trim();
+            userAnswers.whereDetail = c ? `Bike Ride: ${c}` : "Bike Ride";
+          }
+        } else if (userAnswers.whereCategory === 'other') {
+          const o = document.getElementById("input-other-where").value.trim();
+          userAnswers.whereDetail = o ? o : "Special Custom Date";
+        }
+      }
+
+      // Validation check before proceeding from step 2
+      if (stepNum === 3 && !userAnswers.when) {
+        alert("Please pick when you'd like to go! ⏰");
+        return;
+      }
+
+      // Update dots
+      for (let i = 1; i <= 3; i++) {
+        const dot = document.getElementById("dot-" + i);
+        if (dot) {
+          dot.classList.toggle("active", i === stepNum);
+          dot.classList.toggle("passed", i < stepNum);
+        }
+      }
+
+      // Hide all step containers
+      document.getElementById("quiz-step-1").style.display = (stepNum === 1) ? "block" : "none";
+      document.getElementById("quiz-step-2").style.display = (stepNum === 2) ? "block" : "none";
+      document.getElementById("quiz-step-3").style.display = (stepNum === 3) ? "block" : "none";
+      document.getElementById("quiz-step-summary").style.display = "none";
+    }
+
+    // Step 1: Where selection
+    function selectWhereOption(val) {
+      playSound('pop');
+      userAnswers.whereCategory = val;
+
+      // Update UI cards
+      document.querySelectorAll("#quiz-step-1 .option-card").forEach(c => {
+        c.classList.toggle("selected", c.getAttribute("data-val") === val);
+      });
+
+      // Show relevant sub-section
+      document.getElementById("sub-movie").classList.toggle("show", val === 'movie');
+      document.getElementById("sub-abroad").classList.toggle("show", val === 'abroad');
+      document.getElementById("sub-bikeride").classList.toggle("show", val === 'bikeride');
+      document.getElementById("sub-other").classList.toggle("show", val === 'other');
+    }
+
+    function setSubAbroad(place) {
+      playSound('pop');
+      userAnswers.whereDetail = place;
+      document.querySelectorAll("#sub-abroad .sub-opt-btn").forEach(b => {
+        b.classList.toggle("selected", b.textContent.includes(place) || (place === 'others' && b.textContent.includes("Others")));
+      });
+      document.getElementById("sub-abroad-other-wrap").style.display = (place === 'others') ? 'block' : 'none';
+    }
+
+    function setSubBike(route) {
+      playSound('pop');
+      userAnswers.whereDetail = route;
+      document.querySelectorAll("#sub-bikeride .sub-opt-btn").forEach(b => {
+        b.classList.toggle("selected", b.textContent.includes(route) || (route === 'others' && b.textContent.includes("Others")));
+      });
+      document.getElementById("sub-bike-other-wrap").style.display = (route === 'others') ? 'block' : 'none';
+    }
+
+    // Step 2: When selection
+    function selectWhenOption(val) {
+      playSound('pop');
+      userAnswers.when = val;
+      document.querySelectorAll("#quiz-step-2 .option-card").forEach(c => {
+        c.classList.toggle("selected", c.getAttribute("data-when") === val);
+      });
+    }
+
+    // Step 3: Whom selection
+    function selectWhomOption(val) {
+      playSound('pop');
+      userAnswers.whom = val;
+      document.querySelectorAll("#quiz-step-3 .option-card").forEach(c => {
+        c.classList.toggle("selected", c.getAttribute("data-whom") === val);
+      });
+    }
+
+    // Step 4: Show Summary Review Card
+    function showSummaryCard() {
+      if (!userAnswers.whom) {
+        alert("Please select with whom you want to go! 👥");
+        return;
+      }
+      playSound('celebrate');
+
+      document.getElementById("quiz-step-1").style.display = "none";
+      document.getElementById("quiz-step-2").style.display = "none";
+      document.getElementById("quiz-step-3").style.display = "none";
+      document.getElementById("quiz-step-summary").style.display = "block";
+
+      document.getElementById("sum-where").textContent = userAnswers.whereDetail || userAnswers.whereCategory;
+      document.getElementById("sum-when").textContent = userAnswers.when;
+      document.getElementById("sum-whom").textContent = userAnswers.whom;
+    }
+
+    // ══════════════════════════════════════════
+    // SUBMISSION & CELEBRATION
+    // ══════════════════════════════════════════
+    function submitResponses() {
+      userAnswers.sweetNote = document.getElementById("input-sweet-note").value.trim();
+      const timestamp = new Date().toLocaleString();
+
+      const payload = {
+        proposalResponse: "SHE SAID YES! 💖",
+        where: userAnswers.whereDetail || userAnswers.whereCategory,
+        when: userAnswers.when,
+        withWhom: userAnswers.whom,
+        note: userAnswers.sweetNote || "None",
+        submittedAt: timestamp
+      };
+
+      // Save locally
+      try {
+        localStorage.setItem("valentine_date_response", JSON.stringify(payload));
+      } catch(e) {}
+
+      // If Formspree/FormSubmit URL configured, POST it
+      if (FORM_ENDPOINT && FORM_ENDPOINT.trim() !== "") {
+        fetch(FORM_ENDPOINT, {
+          method: "POST",
+          headers: { "Content-Type": "application/json", "Accept": "application/json" },
+          body: JSON.stringify(payload)
+        }).catch(err => console.log("Form submit status:", err));
+      }
+
+      // Configure WhatsApp share button link as quick direct notification
+      const summaryText = `Hey! 🥰 I completed the mission and said YES! 💖%0A%0A📍 *Where:* ${encodeURIComponent(payload.where)}%0A⏰ *When:* ${encodeURIComponent(payload.when)}%0A👥 *With:* ${encodeURIComponent(payload.withWhom)}${payload.note && payload.note !== 'None' ? `%0A💌 *Note:* ${encodeURIComponent(payload.note)}` : ''}`;
+      document.getElementById("wa-share-btn").href = `https://wa.me/?text=${summaryText}`;
+
+      document.getElementById("final-summary-sentence").textContent = `Destination: ${payload.where} (${payload.when}) ✨`;
+
+      // Trigger Celebration Screen
+      document.getElementById("screen-quiz").classList.add("hidden");
+      document.getElementById("screen-celebrate").classList.remove("hidden");
+
+      startGrandCelebration();
+    }
+
+    function startGrandCelebration() {
+      playSound('celebrate');
+
+      // Continuous Confetti Shower
+      const duration = 6000;
+      const end = Date.now() + duration;
+      (function frame() {
+        confetti({
+          particleCount: 5,
+          angle: 60,
+          spread: 55,
+          origin: { x: 0 },
+          colors: ["#f43f5e", "#ec4899", "#c084fc"]
+        });
+        confetti({
+          particleCount: 5,
+          angle: 120,
+          spread: 55,
+          origin: { x: 1 },
+          colors: ["#38bdf8", "#8b5cf6", "#f472b6"]
+        });
+        if (Date.now() < end) requestAnimationFrame(frame);
+      })();
+
+      // Floating celebratory emojis
+      const emojis = ["❤️", "💜", "💖", "💝", "💗", "🌸", "✨", "💕", "🎀", "🌷", "😍", "🥰", "💌", "💍"];
+      const layer = document.getElementById("floating-hearts-layer");
+      layer.innerHTML = "";
+      for (let i = 0; i < 28; i++) {
+        setTimeout(() => {
+          const el = document.createElement("div");
+          el.className = "float-emoji";
+          el.textContent = emojis[Math.floor(Math.random() * emojis.length)];
+          el.style.left = Math.random() * 95 + "vw";
+          el.style.fontSize = (1.4 + Math.random() * 2) + "rem";
+          el.style.animationDuration = (3.5 + Math.random() * 3.5) + "s";
+          layer.appendChild(el);
+          el.addEventListener("animationend", () => el.remove());
+        }, i * 160);
+      }
+    }
+
+    function replayEverything() {
+      document.getElementById("screen-celebrate").classList.add("hidden");
+      document.getElementById("screen-intro").classList.remove("hidden");
+      noClickCount = 0;
+      btnNo.style.display = "inline-block";
+      btnNo.style.opacity = "1";
+      btnNo.style.transform = "none";
+      btnNo.style.pointerEvents = "auto";
+      btnNo.innerHTML = "No";
+      btnNo.className = "btn-no";
+      btnYes.className = "btn-yes";
+      btnYes.innerHTML = "💖 YES!";
+    }
+
+    // Admin secret viewer: Add '?view=results' to URL or tap screen-intro 5 times to see saved response
+    let titleTaps = 0;
+    document.querySelector(".title-fancy").addEventListener("click", () => {
+      titleTaps++;
+      if (titleTaps >= 5 || window.location.search.includes("view=results")) {
+        const saved = localStorage.getItem("valentine_date_response");
+        if (saved) {
+          alert("💌 Saved Response:\n" + JSON.stringify(JSON.parse(saved), null, 2));
+        } else {
+          alert("No responses recorded yet in this browser.");
+        }
+        titleTaps = 0;
+      }
+    });
+  </script>
+</body>
+</html>
